@@ -8,8 +8,25 @@ from urllib.parse import parse_qs, urlsplit
 
 import config
 from board import Archive, MessageBoard, escape_html, normalize_message, normalize_username, render_messages
+from request_policy import request_body_error, urlencoded_body_error
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+
+
+def read_request_body(headers, reader):
+    """Apply the firmware body policy before the preview allocates or parses."""
+    normalized = {name.lower(): value for name, value in headers.items()}
+    error = request_body_error(normalized)
+    if error is not None:
+        return error, None
+
+    length = int(normalized.get("content-length", "0"))
+    body = reader.read(length)
+    if normalized.get("content-type", "").lower().startswith("application/x-www-form-urlencoded"):
+        error = urlencoded_body_error(body, length)
+        if error is not None:
+            return error, None
+    return None, body
 
 
 def read_template(name):
@@ -219,8 +236,16 @@ class PreviewHandler(BaseHTTPRequestHandler):
         self.respond(*self.app.handle("GET", self.path))
 
     def do_POST(self):
-        length = min(int(self.headers.get("Content-Length", "0")), 4096)
-        self.respond(*self.app.handle("POST", self.path, self.rfile.read(length)))
+        error, body = read_request_body(self.headers, self.rfile)
+        if error is not None:
+            message, status, content_type = error
+            self.respond(
+                status,
+                {"Content-Type": content_type + "; charset=utf-8", "Cache-Control": "no-store"},
+                message,
+            )
+            return
+        self.respond(*self.app.handle("POST", self.path, body))
 
     def respond(self, status, headers, body):
         data = body if isinstance(body, bytes) else body.encode("utf-8")

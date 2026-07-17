@@ -184,7 +184,7 @@ Downloading never deletes anything. Deletion requires typing `DELETE` exactly on
 
 ## Local preview and tests
 
-The desktop preview uses separate data under `preview-data/` and requires only Python 3:
+The desktop preview uses separate data under `preview-data/`, applies the same bounded URL-encoded request-body policy as the firmware, and requires only Python 3:
 
 ```bash
 python3 preview_server.py --host 0.0.0.0 --port 8765

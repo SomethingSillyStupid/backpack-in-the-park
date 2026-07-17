@@ -1,10 +1,55 @@
+import io
 import os
 import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlencode
 
-from preview_server import PreviewApp
+from preview_server import PreviewApp, read_request_body
+
+
+class UnreadableBody:
+    def read(self, size):
+        raise AssertionError("rejected body must not be read")
+
+
+class PreviewTransportTests(unittest.TestCase):
+    def test_normal_urlencoded_body_is_read_exactly(self):
+        body = b"message=hello"
+        error, received = read_request_body(
+            {
+                "Content-Length": str(len(body)),
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            io.BytesIO(body),
+        )
+        self.assertIsNone(error)
+        self.assertEqual(received, body)
+
+    def test_invalid_oversized_and_multipart_bodies_are_rejected_before_read(self):
+        cases = (
+            ({"Content-Length": "nope", "Content-Type": "application/x-www-form-urlencoded"}, 400),
+            ({"Content-Length": "4097", "Content-Type": "application/x-www-form-urlencoded"}, 413),
+            ({"Content-Length": "1", "Content-Type": "multipart/form-data; boundary=x"}, 415),
+        )
+        for headers, expected_status in cases:
+            with self.subTest(headers=headers):
+                error, body = read_request_body(headers, UnreadableBody())
+                self.assertEqual(error[1], expected_status)
+                self.assertIsNone(body)
+
+    def test_truncated_and_malformed_urlencoded_bodies_are_rejected(self):
+        for body, length in ((b"message=hel", 13), (b"message=%ZZx", 12)):
+            with self.subTest(body=body):
+                error, received = read_request_body(
+                    {
+                        "Content-Length": str(length),
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    io.BytesIO(body),
+                )
+                self.assertEqual(error[1], 400)
+                self.assertIsNone(received)
 
 
 class PreviewAppTests(unittest.TestCase):
