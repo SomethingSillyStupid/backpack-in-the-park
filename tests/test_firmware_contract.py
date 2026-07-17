@@ -90,6 +90,23 @@ class FirmwareContractTests(unittest.TestCase):
         self.assertIn("AAAA and HTTPS DNS queries receive clean no-data answers", readme)
         self.assertIn("`http://192.168.4.1/` as the guaranteed recovery address", readme)
 
+    def test_readme_bundles_desktop_and_mobile_screenshots(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        screenshots = {
+            "docs/screenshots/message-board-desktop.png": (1280, 1100),
+            "docs/screenshots/message-board-mobile.png": (390, 844),
+        }
+        for relative_path, dimensions in screenshots.items():
+            with self.subTest(relative_path=relative_path):
+                image = (ROOT / relative_path).read_bytes()
+                self.assertEqual(image[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(
+                    (int.from_bytes(image[16:20], "big"), int.from_bytes(image[20:24], "big")),
+                    dimensions,
+                )
+                self.assertGreater(len(image), 10_000)
+                self.assertIn(relative_path, readme)
+
     def test_default_ssid_exposes_recovery_ip_without_changing_board_identity(self):
         source = (ROOT / "config.py").read_text(encoding="utf-8")
         self.assertIn('SSID = "BACKPACK-001 OPEN 192.168.4.1"', source)

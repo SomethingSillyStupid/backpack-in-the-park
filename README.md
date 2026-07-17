@@ -20,6 +20,15 @@ Open ABOUT or WELCOME for the unit's story
 
 `/` is the canonical message board; `/board` remains a compatibility alias and `/welcome` preserves the configurable introduction. Foreign HTTP hostnames, common captive-network probes, and unknown HTTP routes return to the local root. HTTPS and HSTS requests cannot be transparently redirected: TLS happens before Backpack can send an HTTP response, and the Pico cannot present trusted certificates for arbitrary internet hostnames. A browser connection error for an HTTPS address is therefore a normal captive-portal limitation, not proof that local DNS or HTTP is down.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/message-board-desktop.png" alt="Backpack In The Park message board on a desktop browser" width="68%">
+  <img src="docs/screenshots/message-board-mobile.png" alt="Backpack In The Park message board at phone size" width="25%">
+</p>
+
+<p align="center"><em>Desktop preview and phone-sized captive-portal layout.</em></p>
+
 ## Features
 
 - Open, standalone Pico W access point
