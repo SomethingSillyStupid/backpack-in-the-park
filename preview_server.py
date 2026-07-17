@@ -8,9 +8,11 @@ from urllib.parse import parse_qs, urlsplit
 
 import config
 from board import Archive, MessageBoard, escape_html, normalize_message, normalize_username, render_messages
+from captive_portal import CAPTIVE_PROBE_PATHS, portal_url
 from request_policy import request_body_error, urlencoded_body_error
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+RECOVERY_URL = portal_url("192.168.4.1")
 
 
 def read_request_body(headers, reader):
@@ -79,6 +81,7 @@ class PreviewApp:
                 "welcome_status": config.WELCOME_STATUS,
                 "welcome_button_label": config.WELCOME_BUTTON_LABEL,
                 "welcome_disclosure": config.WELCOME_DISCLOSURE,
+                "recovery_url": RECOVERY_URL,
                 "board_name": config.BOARD_NAME,
                 "board_id": config.BOARD_ID,
             },
@@ -110,6 +113,7 @@ class PreviewApp:
                 "about_title": config.ABOUT_TITLE,
                 "about_status": config.ABOUT_STATUS,
                 "about_return_label": config.ABOUT_RETURN_LABEL,
+                "recovery_url": RECOVERY_URL,
                 "board_name": config.BOARD_NAME,
                 "board_id": config.BOARD_ID,
             },
@@ -133,6 +137,7 @@ class PreviewApp:
             {
                 "board_name": config.BOARD_NAME,
                 "board_id": config.BOARD_ID,
+                "recovery_url": RECOVERY_URL,
                 "message_count_label": "%d MESSAGE%s"
                 % (len(self.board.messages), "" if len(self.board.messages) == 1 else "S"),
             },
@@ -165,7 +170,7 @@ class PreviewApp:
         query = parse_qs(parsed.query)
         headers = {"Cache-Control": "no-store"}
 
-        if method == "GET" and path == "/":
+        if method == "GET" and path == "/welcome":
             headers["Content-Type"] = "text/html; charset=utf-8"
             return 200, headers, self.render_welcome()
 
@@ -181,7 +186,7 @@ class PreviewApp:
             headers["Content-Type"] = "text/html; charset=utf-8"
             return 200, headers, self.render_about()
 
-        if method == "GET" and path == "/board":
+        if method == "GET" and path in ("/", "/board"):
             headers["Content-Type"] = "text/html; charset=utf-8"
             return 200, headers, self.render_public(query.get("error", [""])[0])
 
@@ -193,9 +198,9 @@ class PreviewApp:
             except ValueError as error:
                 text = str(error)
                 code = "name-long" if "Username" in text else "message-long" if "too long" in text else "blank"
-                return 303, {"Location": "/board?error=" + code}, ""
+                return 303, {"Location": "/?error=" + code}, ""
             self.board.post(user, message, self.now())
-            return 303, {"Location": "/board"}, ""
+            return 303, {"Location": "/"}, ""
 
         if method == "GET" and path == self.admin_path:
             status = query.get("status", [""])[0]
@@ -226,7 +231,10 @@ class PreviewApp:
                 return 303, {"Location": self.admin_path + "?status=" + status}, ""
             return 303, {"Location": self.admin_path + "?status=confirm"}, ""
 
-        return 302, {"Location": "/board"}, ""
+        if method == "GET" and path in CAPTIVE_PROBE_PATHS:
+            return 302, {"Location": "/"}, ""
+
+        return 302, {"Location": "/"}, ""
 
 
 class PreviewHandler(BaseHTTPRequestHandler):

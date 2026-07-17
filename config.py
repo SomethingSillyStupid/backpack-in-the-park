@@ -1,8 +1,9 @@
 """Per-installation settings. Edit these before copying files to a Pico W."""
 
-# Keep SSID at or below 32 UTF-8 bytes. The public title derives from it.
-SSID = "Backpack_In_The_Park_001"
-BOARD_NAME = SSID.replace("_", " ")
+# Keep SSID at or below 32 UTF-8 bytes. Include the direct recovery IP so a
+# visitor can rediscover the board from Wi-Fi settings after closing the tab.
+SSID = "BACKPACK-001 OPEN 192.168.4.1"
+BOARD_NAME = "BACKPACK IN THE PARK"
 BOARD_ID = "BITP-001"
 
 # Captive introduction. Text is escaped; use plain text rather than HTML.

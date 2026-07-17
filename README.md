@@ -2,7 +2,7 @@
 
 A tiny, place-bound, anonymous message board for the Raspberry Pi Pico W: part geocache, part low-maintenance digital Tamagotchi.
 
-The Pico creates an open Wi-Fi access point and captive introduction. A visitor discovers the unit's portrait and story, enters its local message board, and leaves a text message for whoever finds it next. There is no internet connection, account, cookie, analytics package, or participant/device log.
+The Pico creates an open Wi-Fi access point whose canonical `/` page is the message board. A visitor can read or post immediately, open the unit's About page, or visit the optional introduction at `/welcome`. There is no internet connection, account, cookie, analytics package, or participant/device log.
 
 Backpack is a sibling of [Shovel In The Park](https://github.com/SomethingSillyStupid/shovel-in-the-park). Shovel opens directly onto the board; Backpack gives each physical unit a configurable identity and front door.
 
@@ -11,19 +11,23 @@ Backpack is a sibling of [Shovel In The Park](https://github.com/SomethingSillyS
 ```text
 Join the open Wi-Fi network
           ↓
-Discover the unit's local portrait and introduction
+Message board opens at /
           ↓
-      ENTER MESSAGE BOARD
+Read or post immediately
           ↓
-Read current and earlier-session messages or leave your own
+Open ABOUT or WELCOME for the unit's story
 ```
 
-Foreign HTTP hostnames and unknown HTTP routes return to the local `/board`. HTTPS and HSTS requests cannot be transparently redirected: TLS happens before Backpack can send an HTTP response, and the Pico cannot present trusted certificates for arbitrary internet hostnames. A browser connection error for an HTTPS address is therefore a normal captive-portal limitation, not proof that local DNS or HTTP is down.
+`/` is the canonical message board; `/board` remains a compatibility alias and `/welcome` preserves the configurable introduction. Foreign HTTP hostnames, common captive-network probes, and unknown HTTP routes return to the local root. HTTPS and HSTS requests cannot be transparently redirected: TLS happens before Backpack can send an HTTP response, and the Pico cannot present trusted certificates for arbitrary internet hostnames. A browser connection error for an HTTPS address is therefore a normal captive-portal limitation, not proof that local DNS or HTTP is down.
 
 ## Features
 
 - Open, standalone Pico W access point
 - Catch-all DNS captive portal using the bundled `phew/` snapshot from [Pimoroni Phew!](https://github.com/pimoroni/phew)
+- Board-first canonical root with `/board` compatibility and optional `/welcome`
+- Explicit captive probes for Apple, Android/ChromeOS, Windows, and Firefox
+- IPv4 catch-all answers; AAAA and HTTPS DNS queries receive clean no-data answers
+- Recovery URL shown in the default SSID and on every public page
 - Configurable unit name, introduction, portrait, and disclosure
 - Configurable offline About page linked from the board
 - A project address visitors can save and open after leaving the offline network
@@ -72,8 +76,8 @@ Posts are visible to everyone connected to the access point and may be archived 
 Edit `config.py` before deployment:
 
 ```python
-SSID = "Backpack_In_The_Park_001"
-BOARD_NAME = SSID.replace("_", " ")
+SSID = "BACKPACK-001 OPEN 192.168.4.1"
+BOARD_NAME = "BACKPACK IN THE PARK"
 BOARD_ID = "BITP-001"
 
 WELCOME_TITLE = "BACKPACK IN THE PARK"
@@ -110,7 +114,7 @@ cannot load until the visitor disconnects from Backpack's offline network.
 Only `http://` and `https://` project URLs are rendered; unsafe schemes are
 discarded.
 
-Use a unique `SSID`, `BOARD_ID`, portrait, and hard-to-guess `ADMIN_PATH` for each physical unit. **Changing the published example operator path before field deployment is mandatory.** SSIDs may contain ordinary spaces and punctuation but must not exceed 32 UTF-8 bytes.
+Use a unique `SSID`, `BOARD_ID`, portrait, and hard-to-guess `ADMIN_PATH` for each physical unit. Keep `192.168.4.1` visible in the SSID unless you deliberately change the AP address; it remains discoverable in Wi-Fi settings after the browser tab closes. **Changing the published example operator path before field deployment is mandatory.** SSIDs may contain ordinary spaces and punctuation but must not exceed 32 UTF-8 bytes.
 
 ### Change or remove the welcome image
 
@@ -168,13 +172,13 @@ Deleting the archive leaves the current in-memory board alone. After the next re
 
 3. Disconnect any serial REPL session and reset the Pico.
 4. On every firmware update, disconnect and rejoin the configured SSID so the device receives Backpack's local DNS setting through DHCP. Forgetting and re-adding the network is the most reliable way to clear a stale lease.
-5. The captive introduction should appear. If it does not, open the AP address directly, commonly `http://192.168.4.1/`.
-6. Test the catch-all with an explicitly HTTP address such as `http://neverssl.com/`; it should redirect to the local `/board`. Modern browsers often upgrade ordinary names to HTTPS, which will fail before an HTTP redirect is possible. Use `http://192.168.4.1/board` as the guaranteed recovery address.
+5. The message board should appear immediately. If it does not, open `http://192.168.4.1/`; `/board` remains an alias and the longer introduction remains at `/welcome`.
+6. Test the catch-all with an explicitly HTTP address such as `http://neverssl.com/`; it should redirect to the local root board. Modern browsers often upgrade ordinary names to HTTPS, which will fail before an HTTP redirect is possible. Use `http://192.168.4.1/` as the guaranteed recovery address.
 7. Use the exact private `ADMIN_PATH` to download or delete the archive.
 
-`captive_portal.py` configures the AP to advertise its own IP as DNS and distinguishes direct local visits from intercepted foreign HTTP hosts. HTTPS and HSTS requests cannot be transparently redirected because certificate validation happens before the Pico can return an HTTP response.
+`captive_portal.py` configures the AP to advertise its own IP as DNS, applies the canonical-host redirect to every named HTTP route, registers the explicit captive-probe paths, and builds bounded query-type-aware DNS responses. Standard IN/A queries, including a valid EDNS OPT record, receive the local AP address; AAAA, HTTPS, and other query types receive a valid no-data response. Response flags preserve only the client's recursion-desired bit and do not advertise recursion; malformed, non-query, or structurally inconsistent packets are ignored. HTTPS and HSTS requests cannot be transparently redirected because certificate validation happens before the Pico can return an HTTP response.
 
-The bundled Phew snapshot is based on Pimoroni commit `751c40458d6cb954a747fcf494b7326a586ab084`. Its server has a tested local transport patch: request lines are limited to 512 bytes, header lines to 1 KiB, all headers to 4 KiB and 32 fields, and request bodies to 4 KiB. It rejects multipart forms, oversized declarations, truncated bodies, and malformed URL encoding before form parsing, protecting Pico RAM and keeping bad requests fail-closed. Pimoroni's MIT license remains under `phew/LICENSE`.
+The bundled Phew snapshot is based on Pimoroni commit `751c40458d6cb954a747fcf494b7326a586ab084`. Its server and DNS modules have tested local transport patches: request lines are limited to 512 bytes, header lines to 1 KiB, all headers to 4 KiB and 32 fields, and request bodies to 4 KiB; DNS packets are capped by the existing 256-byte receive and parsed structurally before a response is built. The server rejects multipart forms, oversized declarations, truncated bodies, and malformed URL encoding before form parsing, protecting Pico RAM and keeping bad requests fail-closed. Pimoroni's MIT license remains under `phew/LICENSE`.
 
 ## Archive format
 
@@ -196,8 +200,7 @@ The desktop preview uses separate data under `preview-data/`, applies the same b
 python3 preview_server.py --host 0.0.0.0 --port 8765
 ```
 
-Open `http://localhost:8765/` for the welcome page, `/board` for the board, and
-`/about` for the per-device project story.
+Open `http://localhost:8765/` for the board, `/welcome` for the optional introduction, `/board` for the compatibility alias, and `/about` for the per-device project story.
 
 Run the tests and lint checks with:
 

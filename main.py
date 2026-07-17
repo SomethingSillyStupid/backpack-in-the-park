@@ -8,7 +8,12 @@ from phew.server import FileResponse, Response, redirect
 from phew.template import render_template
 
 import config
-from captive_portal import board_url, configure_ap_dns, external_host_redirect
+from captive_portal import (
+    CAPTIVE_PROBE_PATHS,
+    configure_ap_dns,
+    external_host_redirect,
+    portal_url,
+)
 from board import (
     Archive,
     MessageBoard,
@@ -67,6 +72,17 @@ def html_response(body):
     )
 
 
+def local_only(handler):
+    """Redirect every named route to the canonical AP host before handling it."""
+    def wrapped(request):
+        destination = external_host_redirect(request.headers, ap_ip)
+        if destination:
+            return redirect(destination, 302)
+        return handler(request)
+
+    return wrapped
+
+
 def render_welcome_paragraphs():
     for paragraph in config.WELCOME_PARAGRAPHS:
         yield "<p>%s</p>" % escape_html(paragraph)
@@ -109,17 +125,16 @@ def render_board_messages(messages, now):
     return render_messages(messages, now, restored_label=config.RESTORED_TIME_LABEL)
 
 
-@server.route("/", methods=["GET"])
+@server.route("/welcome", methods=["GET"])
+@local_only
 def welcome(request):
-    destination = external_host_redirect(request.headers, ap_ip)
-    if destination:
-        return redirect(destination, 302)
     return html_response(render_template(
         "static/welcome.html",
         welcome_title=config.WELCOME_TITLE,
         welcome_status=config.WELCOME_STATUS,
         welcome_button_label=config.WELCOME_BUTTON_LABEL,
         welcome_disclosure=config.WELCOME_DISCLOSURE,
+        recovery_url=portal_url(ap_ip),
         board_name=config.BOARD_NAME,
         board_id=config.BOARD_ID,
         render_welcome_paragraphs=render_welcome_paragraphs,
@@ -128,6 +143,7 @@ def welcome(request):
 
 
 @server.route("/welcome-image", methods=["GET"])
+@local_only
 def welcome_image(request):
     if not config.WELCOME_IMAGE_PATH:
         return "No welcome image configured.", 404, "text/plain"
@@ -141,12 +157,14 @@ def welcome_image(request):
 
 
 @server.route("/about", methods=["GET"])
+@local_only
 def about(request):
     return html_response(render_template(
         "static/about.html",
         about_title=config.ABOUT_TITLE,
         about_status=config.ABOUT_STATUS,
         about_return_label=config.ABOUT_RETURN_LABEL,
+        recovery_url=portal_url(ap_ip),
         board_name=config.BOARD_NAME,
         board_id=config.BOARD_ID,
         render_about_paragraphs=render_about_paragraphs,
@@ -155,12 +173,15 @@ def about(request):
     ))
 
 
+@server.route("/", methods=["GET"])
 @server.route("/board", methods=["GET"])
+@local_only
 def index(request):
     return html_response(render_template(
         "static/index.html",
         board_name=config.BOARD_NAME,
         board_id=config.BOARD_ID,
+        recovery_url=portal_url(ap_ip),
         message_count_label=(
             "%d MESSAGE%s" % (len(board.messages), "" if len(board.messages) == 1 else "S")
         ),
@@ -172,6 +193,7 @@ def index(request):
 
 
 @server.route("/post", methods=["POST"])
+@local_only
 def post_message(request):
     try:
         raw_user = decode_form_value(request.form.get("username", ""))
@@ -186,10 +208,10 @@ def post_message(request):
             code = "message-long"
         else:
             code = "blank"
-        return redirect("/board?error=" + code, 303)
+        return redirect("/?error=" + code, 303)
 
     board.post(user, message, uptime_seconds())
-    return redirect("/board", 303)
+    return redirect("/", 303)
 
 
 def admin_status_message(request):
@@ -204,6 +226,7 @@ def admin_status_message(request):
 
 
 @server.route(config.ADMIN_PATH, methods=["GET"])
+@local_only
 def admin(request):
     stats = archive.stats()
     return html_response(render_template(
@@ -219,6 +242,7 @@ def admin(request):
 
 
 @server.route(config.ADMIN_PATH + "/download", methods=["GET"])
+@local_only
 def download_archive(request):
     if archive.stats()["records"] == 0:
         return "No archived messages yet.", 404, "text/plain"
@@ -234,6 +258,7 @@ def download_archive(request):
 
 
 @server.route(config.ADMIN_PATH + "/delete", methods=["POST"])
+@local_only
 def delete_archive(request):
     confirmation = request.form.get("confirmation", "")
     if confirmation == "DELETE":
@@ -243,10 +268,19 @@ def delete_archive(request):
     return redirect(config.ADMIN_PATH + "?status=confirm", 303)
 
 
-# Captive portal probes and unknown HTTP destinations return to the board.
+# Keep operating systems in captive mode and send every probe to the board.
+def captive_probe(request):
+    return redirect(portal_url(ap_ip), 302)
+
+
+for path in CAPTIVE_PROBE_PATHS:
+    server.add_route(path, captive_probe, methods=["GET"])
+
+
+# Unknown HTTP destinations return to the canonical board root.
 @server.catchall()
 def catchall(request):
-    return redirect(board_url(ap_ip), 302)
+    return redirect(portal_url(ap_ip), 302)
 
 
 # Open AP: no password, internet uplink, registration, or login.

@@ -27,11 +27,14 @@ class PublicTemplateTests(unittest.TestCase):
         self.assertIn('maxlength="280"', self.html)
         self.assertIn("0 / 280", self.html)
 
-    def test_manual_refresh_and_disclaimer_are_present(self):
-        self.assertIn('href="/board"', self.html)
+    def test_navigation_recovery_and_disclaimer_are_present(self):
+        self.assertIn('href="/"', self.html)
         self.assertIn('href="/about"', self.html)
+        self.assertIn('href="/welcome"', self.html)
+        self.assertIn("{{recovery_url}}", self.html)
         self.assertIn("ABOUT THIS BACKPACK", self.html)
         self.assertIn("REFRESH MESSAGES", self.html)
+        self.assertIn("LOST THE PAGE?", self.html)
         self.assertIn("Posts are public and may be archived.", self.html)
         self.assertIn("No device or visitor information is recorded.", self.html)
 
@@ -63,7 +66,8 @@ class WelcomeTemplateTests(unittest.TestCase):
         self.assertIn("{{welcome_title}}", self.html)
         self.assertIn("{{render_welcome_image()}}", self.html)
         self.assertIn("{{render_welcome_paragraphs()}}", self.html)
-        self.assertIn('href="/board"', self.html)
+        self.assertIn('href="/"', self.html)
+        self.assertIn("{{recovery_url}}", self.html)
         self.assertIn("{{welcome_button_label}}", self.html)
 
 
@@ -79,7 +83,8 @@ class AboutTemplateTests(unittest.TestCase):
         self.assertIn("{{render_about_image()}}", self.html)
         self.assertIn("{{render_about_paragraphs()}}", self.html)
         self.assertIn("{{render_about_project_link()}}", self.html)
-        self.assertIn('href="/board"', self.html)
+        self.assertIn('href="/"', self.html)
+        self.assertIn("{{recovery_url}}", self.html)
         self.assertIn("{{about_return_label}}", self.html)
 
     def test_about_keeps_touch_controls_large(self):

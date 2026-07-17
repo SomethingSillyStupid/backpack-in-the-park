@@ -13,13 +13,24 @@ class FirmwareContractTests(unittest.TestCase):
         self.assertIn("dns.run_catchall(ap_ip)", source)
         self.assertIn("@server.catchall()", source)
         self.assertIn("external_host_redirect(request.headers, ap_ip)", source)
+        self.assertIn("def local_only(handler):", source)
+        self.assertEqual(source.count("@local_only"), 8)
         self.assertIn("return redirect(destination, 302)", source)
-        self.assertIn("return redirect(board_url(ap_ip), 302)", source)
+        self.assertIn("return redirect(portal_url(ap_ip), 302)", source)
+        self.assertIn("for path in CAPTIVE_PROBE_PATHS:", source)
+        self.assertIn('server.add_route(path, captive_probe, methods=["GET"])', source)
+
+    def test_dns_transport_uses_query_type_aware_response_builder(self):
+        source = (ROOT / "phew" / "dns.py").read_text(encoding="utf-8")
+        self.assertIn("from captive_portal import build_dns_response", source)
+        self.assertIn("response = build_dns_response(request, ip_address)", source)
+        self.assertIn("if response is not None:", source)
 
     def test_main_has_public_post_and_hidden_admin_routes(self):
         source = (ROOT / "main.py").read_text(encoding="utf-8")
         self.assertIn('@server.route("/", methods=["GET"])', source)
         self.assertIn('@server.route("/board", methods=["GET"])', source)
+        self.assertIn('@server.route("/welcome", methods=["GET"])', source)
         self.assertIn('@server.route("/about", methods=["GET"])', source)
         self.assertIn('@server.route("/welcome-image", methods=["GET"])', source)
         self.assertIn('@server.route("/post", methods=["POST"])', source)
@@ -71,9 +82,18 @@ class FirmwareContractTests(unittest.TestCase):
         self.assertIn("disconnect and rejoin", readme)
         self.assertIn("HTTPS and HSTS requests cannot be transparently redirected", readme)
 
-    def test_identity_ripples_from_ssid_into_board_name(self):
+    def test_readme_documents_board_first_recovery_and_probe_behavior(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("`/` is the canonical message board", readme)
+        self.assertIn("`/welcome`", readme)
+        self.assertIn("Apple, Android/ChromeOS, Windows, and Firefox", readme)
+        self.assertIn("AAAA and HTTPS DNS queries receive clean no-data answers", readme)
+        self.assertIn("`http://192.168.4.1/` as the guaranteed recovery address", readme)
+
+    def test_default_ssid_exposes_recovery_ip_without_changing_board_identity(self):
         source = (ROOT / "config.py").read_text(encoding="utf-8")
-        self.assertIn('BOARD_NAME = SSID.replace("_", " ")', source)
+        self.assertIn('SSID = "BACKPACK-001 OPEN 192.168.4.1"', source)
+        self.assertIn('BOARD_NAME = "BACKPACK IN THE PARK"', source)
 
 
 if __name__ == "__main__":

@@ -60,18 +60,23 @@ class PreviewAppTests(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def test_root_is_configurable_welcome_and_board_is_separate(self):
+    def test_root_is_board_and_welcome_remains_available(self):
         status, headers, body = self.app.handle("GET", "/")
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers["Content-Type"])
         self.assertNotIn("{{", body)
-        self.assertIn("ENTER MESSAGE BOARD", body)
-        self.assertIn('href="/board"', body)
+        self.assertIn("NO MESSAGES FOUND", body)
+        self.assertIn("http://192.168.4.1/", body)
 
         status, _, body = self.app.handle("GET", "/board")
         self.assertEqual(status, 200)
-        self.assertNotIn("{{", body)
         self.assertIn("NO MESSAGES FOUND", body)
+
+        status, _, body = self.app.handle("GET", "/welcome")
+        self.assertEqual(status, 200)
+        self.assertNotIn("{{", body)
+        self.assertIn("ENTER MESSAGE BOARD", body)
+        self.assertIn('href="/"', body)
 
     def test_welcome_image_is_served_locally(self):
         status, headers, body = self.app.handle("GET", "/welcome-image")
@@ -92,8 +97,9 @@ class PreviewAppTests(unittest.TestCase):
         self.assertIn("About &lt;this&gt;", body)
         self.assertIn("Unit &lt;script&gt;alert(1)&lt;/script&gt;", body)
         self.assertNotIn("<script>alert(1)</script>", body)
-        self.assertIn('href="/board"', body)
+        self.assertIn('href="/"', body)
         self.assertIn("RETURN TO MESSAGE BOARD", body)
+        self.assertIn("http://192.168.4.1/", body)
 
     def test_about_project_url_rejects_unsafe_scheme(self):
         with patch("config.ABOUT_PROJECT_URL", "javascript:alert(1)"):
@@ -104,17 +110,29 @@ class PreviewAppTests(unittest.TestCase):
         payload = urlencode({"username": "Moth", "message": "one\ntwo"}).encode()
         status, headers, _ = self.app.handle("POST", "/post", payload)
         self.assertEqual(status, 303)
-        self.assertEqual(headers["Location"], "/board")
-        _, _, body = self.app.handle("GET", "/board")
+        self.assertEqual(headers["Location"], "/")
+        _, _, body = self.app.handle("GET", "/")
         self.assertIn("Moth", body)
         self.assertIn("one<br>two", body)
         self.assertIn("1 MESSAGE", body)
         self.assertNotIn("1 MESSAGES", body)
 
-    def test_unknown_path_redirects_to_board(self):
-        status, headers, _ = self.app.handle("GET", "/generate_204")
-        self.assertEqual(status, 302)
-        self.assertEqual(headers["Location"], "/board")
+    def test_captive_probes_and_unknown_paths_redirect_to_root_board(self):
+        for path in (
+            "/hotspot-detect.html",
+            "/library/test/success.html",
+            "/generate_204",
+            "/gen_204",
+            "/connecttest.txt",
+            "/ncsi.txt",
+            "/canonical.html",
+            "/success.txt",
+            "/somewhere-else",
+        ):
+            with self.subTest(path=path):
+                status, headers, _ = self.app.handle("GET", path)
+                self.assertEqual(status, 302)
+                self.assertEqual(headers["Location"], "/")
 
     def test_new_preview_instance_restores_archived_posts_as_earlier_session(self):
         payload = urlencode({"username": "Cache", "message": "remember this"}).encode()
