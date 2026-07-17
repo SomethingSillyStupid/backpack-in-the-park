@@ -6,13 +6,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FirmwareContractTests(unittest.TestCase):
-    def test_main_configures_open_ap_dns_and_catchall(self):
+    def test_main_configures_open_ap_dns_and_host_aware_catchall(self):
         source = (ROOT / "main.py").read_text(encoding="utf-8")
         self.assertIn("ap = access_point(config.SSID)", source)
-        self.assertIn("ap_ip = ap.ifconfig()[0]", source)
+        self.assertIn("ap_ip = configure_ap_dns(ap)", source)
         self.assertIn("dns.run_catchall(ap_ip)", source)
         self.assertIn("@server.catchall()", source)
-        self.assertIn('redirect("http://%s/board" % ap_ip, 302)', source)
+        self.assertIn("external_host_redirect(request.headers, ap_ip)", source)
+        self.assertIn("return redirect(destination, 302)", source)
+        self.assertIn("return redirect(board_url(ap_ip), 302)", source)
 
     def test_main_has_public_post_and_hidden_admin_routes(self):
         source = (ROOT / "main.py").read_text(encoding="utf-8")
@@ -61,6 +63,13 @@ class FirmwareContractTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("bundled `phew/`", readme)
         self.assertNotIn("micropython-phew", readme)
+
+    def test_readme_explains_http_redirect_and_https_boundary(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("`captive_portal.py`", readme)
+        self.assertIn("`http://neverssl.com/`", readme)
+        self.assertIn("disconnect and rejoin", readme)
+        self.assertIn("HTTPS and HSTS requests cannot be transparently redirected", readme)
 
     def test_identity_ripples_from_ssid_into_board_name(self):
         source = (ROOT / "config.py").read_text(encoding="utf-8")

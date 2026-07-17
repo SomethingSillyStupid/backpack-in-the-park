@@ -8,6 +8,7 @@ from phew.server import FileResponse, Response, redirect
 from phew.template import render_template
 
 import config
+from captive_portal import board_url, configure_ap_dns, external_host_redirect
 from board import (
     Archive,
     MessageBoard,
@@ -110,6 +111,9 @@ def render_board_messages(messages, now):
 
 @server.route("/", methods=["GET"])
 def welcome(request):
+    destination = external_host_redirect(request.headers, ap_ip)
+    if destination:
+        return redirect(destination, 302)
     return html_response(render_template(
         "static/welcome.html",
         welcome_title=config.WELCOME_TITLE,
@@ -242,11 +246,11 @@ def delete_archive(request):
 # Captive portal probes and unknown HTTP destinations return to the board.
 @server.catchall()
 def catchall(request):
-    return redirect("http://%s/board" % ap_ip, 302)
+    return redirect(board_url(ap_ip), 302)
 
 
 # Open AP: no password, internet uplink, registration, or login.
 ap = access_point(config.SSID)
-ap_ip = ap.ifconfig()[0]
+ap_ip = configure_ap_dns(ap)
 dns.run_catchall(ap_ip)
 server.run()

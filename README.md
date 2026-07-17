@@ -18,7 +18,7 @@ Discover the unit's local portrait and introduction
 Read current and earlier-session messages or leave your own
 ```
 
-Unknown HTTP routes return to `/board`. HTTPS sites cannot be transparently intercepted without certificate errors; that is a normal captive-portal limitation.
+Foreign HTTP hostnames and unknown HTTP routes return to the local `/board`. HTTPS and HSTS requests cannot be transparently redirected: TLS happens before Backpack can send an HTTP response, and the Pico cannot present trusted certificates for arbitrary internet hostnames. A browser connection error for an HTTPS address is therefore a normal captive-portal limitation, not proof that local DNS or HTTP is down.
 
 ## Features
 
@@ -52,6 +52,7 @@ Posts are visible to everyone connected to the access point and may be archived 
 ├── main.py
 ├── board.py
 ├── config.py
+├── captive_portal.py      # AP DNS and host-aware HTTP routing
 ├── request_policy.py
 ├── archive.jsonl          # created after the first post
 ├── boot.id / boot.id.tmp  # alternating non-personal boot-counter slots
@@ -155,6 +156,7 @@ Deleting the archive leaves the current in-memory board alone. After the next re
    main.py
    board.py
    config.py
+   captive_portal.py
    request_policy.py
    phew/
    static/welcome.html
@@ -165,8 +167,12 @@ Deleting the archive leaves the current in-memory board alone. After the next re
    ```
 
 3. Disconnect any serial REPL session and reset the Pico.
-4. Join the configured SSID. The captive introduction should appear. If it does not, visit the AP address, commonly `http://192.168.4.1/`.
-5. Use the exact private `ADMIN_PATH` to download or delete the archive.
+4. On every firmware update, disconnect and rejoin the configured SSID so the device receives Backpack's local DNS setting through DHCP. Forgetting and re-adding the network is the most reliable way to clear a stale lease.
+5. The captive introduction should appear. If it does not, open the AP address directly, commonly `http://192.168.4.1/`.
+6. Test the catch-all with an explicitly HTTP address such as `http://neverssl.com/`; it should redirect to the local `/board`. Modern browsers often upgrade ordinary names to HTTPS, which will fail before an HTTP redirect is possible. Use `http://192.168.4.1/board` as the guaranteed recovery address.
+7. Use the exact private `ADMIN_PATH` to download or delete the archive.
+
+`captive_portal.py` configures the AP to advertise its own IP as DNS and distinguishes direct local visits from intercepted foreign HTTP hosts. HTTPS and HSTS requests cannot be transparently redirected because certificate validation happens before the Pico can return an HTTP response.
 
 The bundled Phew snapshot is based on Pimoroni commit `751c40458d6cb954a747fcf494b7326a586ab084`. Its server has a tested local transport patch: request lines are limited to 512 bytes, header lines to 1 KiB, all headers to 4 KiB and 32 fields, and request bodies to 4 KiB. It rejects multipart forms, oversized declarations, truncated bodies, and malformed URL encoding before form parsing, protecting Pico RAM and keeping bad requests fail-closed. Pimoroni's MIT license remains under `phew/LICENSE`.
 
