@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{welcome_title}} — {{board_id}}</title>
+<style>
+*{box-sizing:border-box}html{background:#082b2b}body{margin:0;min-height:100vh;padding:10px;color:#111;background:#082b2b;font:16px/1.45 Arial,Helvetica,sans-serif}.window{width:100%;max-width:580px;margin:0 auto;background:#c0c0c0;border:2px outset #fff;box-shadow:3px 3px 0 #000}.titlebar{padding:5px 7px;color:#fff;background:#000080;font-weight:bold}.body{padding:12px}.identity{text-align:center}.identity h1{margin:5px 0;font:700 25px/1.1 "Courier New",monospace}.unit{margin:0 0 10px;font:13px "Courier New",monospace}.portrait{display:block;width:100%;max-height:340px;object-fit:contain;margin:10px auto;border:2px inset #fff;background:#111}.status{margin:10px 0;padding:7px;color:#00ff00;background:#000;border:2px inset #fff;font:12px/1.4 "Courier New",monospace}.copy{padding:2px 8px}.copy p{margin:10px 0}.enter{display:flex;justify-content:center;margin:16px 0}.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:8px 18px;color:#000;background:#c0c0c0;border:2px outset #fff;font:bold 15px Arial,Helvetica,sans-serif;text-decoration:none}.button:active{border-style:inset}.notice{padding:8px;border:1px dotted #555;background:#ffffcc;font:12px/1.4 "Courier New",monospace}.footer{text-align:center;margin-top:10px;color:#d4eeee;font:11px "Courier New",monospace}@media(min-width:520px){body{padding:24px}.body{padding:17px}}
+</style>
+</head>
+<body>
+<main class="window" aria-labelledby="welcome-title">
+<header class="titlebar">NETWORK DISCOVERY — {{board_name}}</header>
+<div class="body">
+<div class="identity"><h1 id="welcome-title">{{welcome_title}}</h1><p class="unit">{{board_id}}</p></div>
+{{render_welcome_image()}}
+<div class="status">{{welcome_status}}<br>INTERNET: NOT AVAILABLE<br>VISITOR IDENTIFICATION: DISABLED</div>
+<div class="copy">{{render_welcome_paragraphs()}}</div>
+<div class="enter"><a class="button" href="/board">{{welcome_button_label}}</a></div>
+<p class="notice">{{welcome_disclosure}}</p>
+</div>
+</main>
+<p class="footer">LOCAL RANGE ONLY // {{board_id}}</p>
+</body>
+</html>

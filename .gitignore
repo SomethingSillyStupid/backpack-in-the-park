@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+preview-data/
+archive.jsonl
+boot.id
+.DS_Store

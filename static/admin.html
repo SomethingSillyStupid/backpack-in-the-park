@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{board_name}} — System Operator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:10px;color:#000;background:#008080;font:16px Arial,Helvetica,sans-serif}.window{max-width:620px;margin:auto;background:#c0c0c0;border:2px outset #fff;box-shadow:2px 2px #000}.title{padding:5px;color:#fff;background:#000080;font-weight:bold}.body{padding:12px}.panel{margin:10px 0;padding:10px;border:2px inset #fff}.stats{background:#000;color:#00ff00;font:14px/1.6 "Courier New",monospace}a.button,button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin:5px 4px 5px 0;padding:7px 14px;color:#000;background:#c0c0c0;border:2px outset #fff;border-radius:0;font:bold 14px Arial;text-decoration:none}input{width:100%;max-width:280px;min-height:44px;padding:8px;border:2px inset #fff;font:16px Arial}.danger{color:#fff;background:#800000}.note{font:12px/1.4 "Courier New",monospace}.message{padding:8px;background:#ffffcc;border:1px dotted #555}
+</style>
+</head>
+<body>
+<main class="window">
+<header class="title">SYSTEM OPERATOR — {{board_name}}</header>
+<div class="body">
+<p class="message">{{admin_message}}</p>
+<section class="panel stats">BOARD: {{board_id}}<br>BOOT: {{boot_id}}<br>RECORDS: {{archive_records}}<br>BYTES: {{archive_bytes}}</section>
+<section class="panel">
+<h2>Archive</h2>
+<p><a class="button" href="{{admin_path}}/download">DOWNLOAD ARCHIVE</a></p>
+<p class="note">Downloading does not delete anything. Confirm the file is safely on your device before continuing.</p>
+</section>
+<section class="panel danger">
+<h2>Delete archive</h2>
+<p>Type DELETE to permanently erase the archive.</p>
+<form method="post" action="{{admin_path}}/delete">
+<label for="confirmation">Confirmation</label><br>
+<input id="confirmation" name="confirmation" autocomplete="off" required>
+<button type="submit">DELETE ARCHIVE</button>
+</form>
+</section>
+<p><a href="/board">Return to public board</a></p>
+</div>
+</main>
+</body>
+</html>
