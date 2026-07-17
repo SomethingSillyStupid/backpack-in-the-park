@@ -32,6 +32,7 @@ class PublicTemplateTests(unittest.TestCase):
         self.assertIn('href="/about"', self.html)
         self.assertIn('href="/welcome"', self.html)
         self.assertIn("{{recovery_url}}", self.html)
+        self.assertIn(".footer a,.footer a:visited{color:#b8ffff}", self.html)
         self.assertIn("ABOUT THIS BACKPACK", self.html)
         self.assertIn("REFRESH MESSAGES", self.html)
         self.assertIn("LOST THE PAGE?", self.html)
